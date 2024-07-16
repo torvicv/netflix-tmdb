@@ -34,8 +34,9 @@ const Home = () => {
   const [watchMoviePlaying, setWatchMoviePlaying] = useState(null);
   const [movieId, setMovieId] = useState("");
   // este es para acceder a la ventana del video creado dinámicamente.
-  const videoDynamic = useRef(null);
-  const [watchMoviePlayingIndex, setWatchMoviePlayingIndex] = useState("");
+  const [watchMoviePlayingIndex, setWatchMoviePlayingIndex] = useState(0);
+  const watchMoviePlayingRef = useRef(null);
+  const [genres, setGenres] = useState([]);
   const [assets, setAssets] = useState({
     asset1: asset1,
     asset2: asset2,
@@ -90,6 +91,7 @@ const Home = () => {
       .then((response) => {
         setVideoPlaying(response.data.results[0].key);
         setWatchVideoPlaying(true);
+        setWatchMoviePlaying(null);
         setTimeout(() => {
           setupResizable();
           setupDraggable();
@@ -98,79 +100,65 @@ const Home = () => {
       .catch((err) => console.error(err));
   };
 
-  let interval = 0;
-  const [leftDynamic, setLeftDynamic] = useState(0);
-  const [topDynamic, setTopDynamic] = useState(0);
-  const [check, setCheck] = useState(true);
+  const [timeoutWatchMovie, setTimeoutWatchMovie] = useState(0);
+  const interval = useRef(0);
+  const movieHover = useRef(null);
 
-  const watchMovie = (e, movie) => {
-    const clearI = setTimeout(() => {
-      interval++;
-      if (interval > 4) {
-        if (watchMoviePlaying == null || watchMoviePlayingIndex != movieId) {
+  const [check, setCheck] = useState(true);
+  const watchMovie2 = (e, movie) => {
+    interval.current++;
+    setCheck(getComputedStyle((e.target as HTMLElement)).display != 'none');
+    const timeoutWatchMovie = setTimeout(() => {
+      if (interval.current === 10) {
+        if ((watchMoviePlayingRef.current == null) && timeoutWatchMovie > 0) {
           axios
             .get(
               `https://api.themoviedb.org/3/movie/${movie}/videos?language=en-US`,
               options
             )
             .then((response) => {
-              const parentRect = e.nativeEvent.target.getBoundingClientRect();
               setWatchMoviePlaying(response.data.results[0].key);
-              setWatchMoviePlayingIndex(movie);
+              watchMoviePlayingRef.current = response.data.results[0].key;
               setMovieId(movie);
-
-              if (videoDynamic && videoDynamic.current && parentRect) {
-                const left =
-                  parentRect.left +
-                  parentRect.width / 2 -
-                  videoDynamic.current.offsetWidth / 2;
-                const top =
-                  parentRect.top +
-                  parentRect.height / 2 -
-                  videoDynamic.current.offsetHeight / 2;
-
-                setLeftDynamic(left);
-                setTopDynamic(top);
-                // Set the position of the child element
-                videoDynamic.current.style.left = `${left}px`;
-                videoDynamic.current.style.top = `${top}px`;
-                videoDynamic.current.style.visibility = "visible";
-                clearTimeout(clearI);
-                interval = 0;
-                setCheck(true);
-              } else if (check) {
-                watchMovie(e, movie);
-              }
+              interval.current = 0;
+              console.log(check);
             })
             .catch((err) => console.error(err));
+          axios.get('https://api.themoviedb.org/3/movie/748783?language=en-US', options)
+            .then(response => {
+              setGenres(response.data.genres);
+            })
+            .catch(err => console.error(err));
+          }
+        } else if (interval.current < 10) {
+          clearTimeout(timeoutWatchMovie);
+          watchMovie2(e, movie);
         }
-      } else {
-        setWatchMoviePlaying(null);
-        watchMovie(e, movie);
-      }
     }, 100);
+    setTimeoutWatchMovie(timeoutWatchMovie);
   };
 
-  const watchMovie2 = (e, movie) => {
-    if (watchMoviePlaying == null || watchMoviePlayingIndex != movieId)
-    axios
-      .get(
-        `https://api.themoviedb.org/3/movie/${movie}/videos?language=en-US`,
-        options
-      )
-      .then((response) => {
-        setWatchMoviePlaying(response.data.results[0].key);
-        setMovieId(movie);
-      })
-      .catch((err) => console.error(err));
-  };
-
+  const clearTimeoutWatchMovie = (e, disable) => {
+    if (disable) {
+    setCheck(getComputedStyle((e.target as HTMLElement)).display != 'none');
+    console.log(check);
+  } else {
+    setCheck(getComputedStyle((e.target as HTMLElement)).display == 'none');
+  }
+    clearTimeout(timeoutWatchMovie);
+  }
+  
+  const clearMovieHover = () => {
+    interval.current = 0;
+    movieHover.current = null;
+  }
+  
   const closeMovie = () => {
     setWatchMoviePlaying(null);
-    setWatchMoviePlayingIndex("");
+    setWatchMoviePlayingIndex(0);
+    watchMoviePlayingRef.current = null;
     setMovieId("");
-    interval = 0;
-    setCheck(false);
+    interval.current = 0;
   };
 
   let dragEl: HTMLElement | null;
@@ -304,28 +292,58 @@ const Home = () => {
                 <div
                   className="group z-40 my-16 flex items-center relative overflow-visible"
                   onMouseOver={(e) => watchMovie2(e, movie.id)}
-                  onMouseOut={closeMovie}
+                  onMouseOut={(e) => {
+                    clearTimeoutWatchMovie(e, false);
+                    clearMovieHover();
+                  }}
                   >
                   <div className="p-4">
                     <img
                       className=""
                       src={`https://image.tmdb.org/t/p/w200/${movie.poster_path}`}
                       alt={movie.title}
-                    />
+                      />
                   </div>
-                  {movie.id == movieId &&
+                  {watchMoviePlaying && movie.id == movieId && 
                   <div
-                    className="hidden hover:positioning group-hover:block bg-black scale-150 top-0 left-0 z-50 absolute w-64 h-64"
-                    onMouseOut={closeMovie}
-                  >
+                  className="group hidden has-[.hidden]:hidden hover:positioning group-hover:block bg-black scale-150 top-0 left-0 z-50 absolute w-64 h-64"
+                  onMouseOut={(e) => {
+                    closeMovie(); 
+                      clearTimeoutWatchMovie(e, true);
+                    }}
+                  > {
+                    check && <div>
+
                     <iframe
-                      className={"w-full"}
+                      ref={movieHover}
+                      className="w-full hidden group-hover:block"
                       src={`https://www.youtube.com/embed/${watchMoviePlaying}?autoplay=true`}
                       title="YouTube video player"
                       frameBorder="0"
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     ></iframe>
-                    <div className="bottom-0 left-0">{movieId}</div>
+                    <div className="bottom-0 left-0">
+                      <button
+                        className="px-4 py-2 text-white"
+                        onClick={watchVideo(movie.id)}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-12">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.91 11.672a.375.375 0 0 1 0 .656l-5.603 3.113a.375.375 0 0 1-.557-.328V8.887c0-.286.307-.466.557-.327l5.603 3.112Z" />
+                      </svg>
+
+                      </button>
+                      <div className="flex text-sm">
+                        {genres.map((genre, index) => (
+                          <div className="text-xs" key={index}>
+                            { genre.name } <span className={(genres.length == (index + 1)) ? 'hidden' : 'text-slate-700'}>*&nbsp;</span> 
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    </div>
+
+                  }
                   </div>
 }
                 </div>
@@ -333,10 +351,35 @@ const Home = () => {
             ))}
           </Swiper>
         </div>
-        
+        {watchVideoPlaying && (
+          <div
+            data-drag-handle="true"
+            data-draggable="true"
+            data-resizable="true"
+            className="after:content-[''] after:absolute after:w-8 after:h-8 after:bg-transparent after:top-0 after:right-0 after:border-r-2 after:border-t-2 after:border-white before:content-[''] before:absolute before:w-8 before:h-8 before:bg-transparent before:bottom-0 before:right-0 before:border-r-2 before:border-b-2 before:border-white bg-transparent absolute resize top-0 left-0 z-50 w-80 h-64 flex justify-center items-center"
+          >
+            <div className="after:content-[''] after:absolute after:w-8 after:h-8 after:bg-transparent after:top-0 after:left-0 after:border-l-2 after:border-t-2 after:border-white before:content-[''] before:absolute before:w-8 before:h-8 before:bg-transparent before:bottom-0 before:left-0 before:border-l-2 before:border-b-2 before:border-white w-full h-full relative bg-transparent">
+              <span
+                className="cursor-pointer text-white absolute top-2 right-2 z-50"
+                onClick={closeVideo}
+              >
+                X
+              </span>
+              <iframe
+                data-drag-handle="true"
+                id="myIframe"
+                className={"absolute w-full h-full p-8 z-60"}
+                src={`https://www.youtube.com/embed/${videoPlaying}?autoplay=true`}
+                title="YouTube video player"
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              ></iframe>
+            </div>
+          </div>
+        )}
         <div className="bg-[#000000AA] relative">
           <h2 className="text-white text-4xl font-semibold py-4 px-2">
-            1 Popular Movies
+            Popular Movies
           </h2>
           <Swiper
             spaceBetween={5}
