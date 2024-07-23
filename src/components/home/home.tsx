@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, MutableRefObject } from "react";
 import vite from "./../../assets/react.svg";
 import axios from "axios";
 // Import Swiper React components
@@ -6,6 +6,8 @@ import { Swiper, SwiperSlide } from "swiper/react";
 
 // Import Swiper styles
 import "swiper/css";
+import "swiper/css/navigation";
+import { Navigation } from "swiper/modules";
 
 import asset1 from "./../../assets/1.svg";
 import asset2 from "./../../assets/2.svg";
@@ -18,9 +20,24 @@ import asset8 from "./../../assets/8.svg";
 import asset9 from "./../../assets/9.svg";
 import asset10 from "./../../assets/10.svg";
 
-interface LastPosition {
-  top: number;
-  left: number;
+interface Sixth {
+  swiperSlideIndex: number,
+  parentElement: HTMLElement
+}
+
+interface Movie {
+  id: string,
+  asset: string,
+  title: string,
+  poster_path: string,
+}
+
+interface Genre {
+  name: string,
+}
+
+interface Result extends Movie {
+  asset: string
 }
 
 const Home = () => {
@@ -28,27 +45,45 @@ const Home = () => {
   const [bgHome2, setBgHome2] = useState(vite);
   const [bgHome3, setBgHome3] = useState(vite);
   const [moviesPlaying, setMoviesPlaying] = useState([]);
-  const [popular, setPopular] = useState([]);
+  const [popular, setPopular] = useState<Result[]>([]);
   const [videoPlaying, setVideoPlaying] = useState(null);
   const [watchVideoPlaying, setWatchVideoPlaying] = useState(false);
   const [watchMoviePlaying, setWatchMoviePlaying] = useState(null);
   const [movieId, setMovieId] = useState("");
-  // este es para acceder a la ventana del video creado dinámicamente.
-  const [watchMoviePlayingIndex, setWatchMoviePlayingIndex] = useState(0);
   const watchMoviePlayingRef = useRef(null);
   const [genres, setGenres] = useState([]);
-  const [assets, setAssets] = useState({
-    asset1: asset1,
-    asset2: asset2,
-    asset3: asset3,
-    asset4: asset4,
-    asset5: asset5,
-    asset6: asset6,
-    asset7: asset7,
-    asset8: asset8,
-    asset9: asset9,
-    asset10: asset10,
-  });
+  const assets = [
+    {
+      value: asset1,
+    },
+    {
+      value: asset2,
+    },
+    {
+      value: asset3,
+    },
+    {
+      value: asset4,
+    },
+    {
+      value: asset5,
+    },
+    {
+      value: asset6,
+    },
+    {
+      value: asset7,
+    },
+    {
+      value: asset8,
+    },
+    {
+      value: asset9,
+    },
+    {
+      value: asset10,
+    }
+  ];
 
   const options = {
     method: "GET",
@@ -92,6 +127,7 @@ const Home = () => {
         setVideoPlaying(response.data.results[0].key);
         setWatchVideoPlaying(true);
         setWatchMoviePlaying(null);
+        watchMoviePlayingRef.current = null;
         setTimeout(() => {
           setupResizable();
           setupDraggable();
@@ -102,63 +138,73 @@ const Home = () => {
 
   const [timeoutWatchMovie, setTimeoutWatchMovie] = useState(0);
   const interval = useRef(0);
-  const movieHover = useRef(null);
-
-  const [check, setCheck] = useState(true);
-  const watchMovie2 = (e, movie) => {
-    interval.current++;
-    setCheck(getComputedStyle((e.target as HTMLElement)).display != 'none');
-    const timeoutWatchMovie = setTimeout(() => {
-      if (interval.current === 10) {
-        if ((watchMoviePlayingRef.current == null) && timeoutWatchMovie > 0) {
-          axios
-            .get(
-              `https://api.themoviedb.org/3/movie/${movie}/videos?language=en-US`,
-              options
-            )
-            .then((response) => {
-              setWatchMoviePlaying(response.data.results[0].key);
-              watchMoviePlayingRef.current = response.data.results[0].key;
-              setMovieId(movie);
-              interval.current = 0;
-              console.log(check);
-            })
-            .catch((err) => console.error(err));
-          axios.get('https://api.themoviedb.org/3/movie/748783?language=en-US', options)
-            .then(response => {
-              setGenres(response.data.genres);
-            })
-            .catch(err => console.error(err));
+  const movieHover: MutableRefObject<HTMLElement | null> = useRef(null);
+  const [check, setCheck] = useState(false);
+  const watchMovie1 = (movie: string) => {
+    setCheck(false);
+    if (watchMoviePlayingRef.current == null && interval.current < 20) {
+      axios
+        .get(
+          `https://api.themoviedb.org/3/movie/${movie}/videos?language=en-US`,
+          options
+        )
+        .then((response) => {
+          console.log(response.data);
+          if (response.data.results.length > 0) {
+            setWatchMoviePlaying(response.data.results[0].key);
+            watchMoviePlayingRef.current = response.data.results[0].key;
           }
-        } else if (interval.current < 10) {
-          clearTimeout(timeoutWatchMovie);
-          watchMovie2(e, movie);
-        }
-    }, 100);
+          setMovieId(movie);
+        })
+        .catch((err) => console.error(err));
+      axios
+        .get(
+          `https://api.themoviedb.org/3/movie/${movie}?language=en-US`,
+          options
+        )
+        .then((response) => {
+          setGenres(response.data.genres);
+        })
+        .catch((err) => console.error(err));
+    } else if (interval.current < 20) {
+      interval.current++;
+      setTimeout(() => {
+        watchMovie1(movie);
+      }, 100);
+    } else {
+      clearTimeoutWatchMovie();
+    }
+  };
+  const watchMovie2 = () => {
+    interval.current = 0;
+    if (watchMoviePlayingRef) {
+      setCheck(true);
+    }
     setTimeoutWatchMovie(timeoutWatchMovie);
   };
 
-  const clearTimeoutWatchMovie = (e, disable) => {
-    if (disable) {
-    setCheck(getComputedStyle((e.target as HTMLElement)).display != 'none');
-    console.log(check);
-  } else {
-    setCheck(getComputedStyle((e.target as HTMLElement)).display == 'none');
-  }
-    clearTimeout(timeoutWatchMovie);
-  }
-  
+  const clearTimeoutWatchMovie = () => {
+    watchMoviePlayingRef.current = null;
+    interval.current = 0;
+  };
+
   const clearMovieHover = () => {
     interval.current = 0;
     movieHover.current = null;
-  }
-  
+  };
+
+  const clearWatchMoviePlayingRef = () => {
+    // if (e.nativeEvent) e.nativeEvent.stopImmediatePropagation();
+    watchMoviePlayingRef.current = null;
+    interval.current = 0;
+  };
+
   const closeMovie = () => {
     setWatchMoviePlaying(null);
-    setWatchMoviePlayingIndex(0);
     watchMoviePlayingRef.current = null;
     setMovieId("");
     interval.current = 0;
+    setCheck(false);
   };
 
   let dragEl: HTMLElement | null;
@@ -192,11 +238,13 @@ const Home = () => {
     window.getSelection()?.removeAllRanges();
   };
 
-  const dragStart = (event) => {
-    dragEl = getDraggableAncestor(event.target);
+  const dragStart = (event: MouseEvent) => {
+    console.log(event);
+    
+    dragEl = getDraggableAncestor(event.target as HTMLElement);
     dragEl.style.setProperty("position", "absolute");
-    lastPosition.current.left = event.target.clientX;
-    lastPosition.current.top = event.target.clientY;
+    lastPosition.current.left = event.clientX;
+    lastPosition.current.top = event.clientY;
     dragHandleEl.classList.add("dragging");
     dragHandleEl.addEventListener("mousemove", dragMove);
   };
@@ -207,8 +255,10 @@ const Home = () => {
   };
 
   const dragEnd = () => {
-    dragHandleEl.classList.remove("dragging");
-    dragHandleEl.removeEventListener("mousemove", dragMove);
+    if (dragHandleEl) {
+      dragHandleEl.classList.remove("dragging");
+      dragHandleEl.removeEventListener("mousemove", dragMove);
+    }
     dragEl = null;
   };
 
@@ -224,12 +274,12 @@ const Home = () => {
         options
       )
       .then((response) => {
-        const results = [];
-        response.data.results.map((result, index: number) => {
+        const results: Result[] = [];
+        response.data.results.map((result: Movie, index: number) => {
           if (index < 10) {
-            Object.keys(assets).forEach((el) => {
-              if (assets[el].includes("src/assets/" + (index + 1) + ".svg")) {
-                result.asset = assets[el];
+            Object.keys(assets).forEach((el, index2) => {
+              if (assets[index2].value.includes("src/assets/" + (index + 1) + ".svg")) {
+                result.asset = assets[index2].value;
               }
             });
             results.push(result);
@@ -273,10 +323,27 @@ const Home = () => {
         </div>
         <div className="relative h-screen w-full z-30 text-white flex items-end">
           <Swiper
+            navigation={true}
+            modules={[Navigation]}
             spaceBetween={20}
             slidesPerView={2}
             className="bg-[#000000AA]"
-            onSlideChange={() => console.log("slide change")}
+            onSlideChange={() => {              
+              clearWatchMoviePlayingRef();
+              document.querySelectorAll(".swiper-slide").forEach((slide) => {
+                slide.classList.remove("positioned");
+              });
+              const sixth = (document.querySelector(".swiper-slide-active") as unknown) as Sixth;
+              const activeIndex = sixth.swiperSlideIndex ?? null;
+              if (sixth && sixth.parentElement) {
+                const siblings = sixth.parentElement.children;
+                if (siblings.length >= 7) {
+                  // Asegúrate de que hay al menos 7 hijos
+                  const sibling = siblings[activeIndex + 6];
+                  if (sibling) sibling.classList.add("positioned"); // O cualquier estilo que desees
+                }
+              }
+            }}
             onSwiper={(swiper) => console.log(swiper)}
             breakpoints={{
               540: { slidesPerView: 3 },
@@ -285,67 +352,91 @@ const Home = () => {
               1024: { slidesPerView: 6 },
             }}
           >
-            {moviesPlaying.map((movie) => (
-              <SwiperSlide
-                key={movie.id}
-              >
-                <div
-                  className="group z-40 my-16 flex items-center relative overflow-visible"
-                  onMouseOver={(e) => watchMovie2(e, movie.id)}
-                  onMouseOut={(e) => {
-                    clearTimeoutWatchMovie(e, false);
-                    clearMovieHover();
-                  }}
+            {moviesPlaying.map((movie: Movie) => (
+              <SwiperSlide key={movie.id}>
+                <div className="group z-40 my-16 flex items-center relative overflow-visible">
+                  <div
+                    className="p-4"
+                    onMouseOver={() => watchMovie1(movie.id)}
+                    onMouseOut={() => {
+                      clearTimeoutWatchMovie();
+                    }}
                   >
-                  <div className="p-4">
                     <img
                       className=""
                       src={`https://image.tmdb.org/t/p/w200/${movie.poster_path}`}
                       alt={movie.title}
-                      />
+                    />
                   </div>
-                  {watchMoviePlaying && movie.id == movieId && 
-                  <div
-                  className="group hidden has-[.hidden]:hidden hover:positioning group-hover:block bg-black scale-150 top-0 left-0 z-50 absolute w-64 h-64"
-                  onMouseOut={(e) => {
-                    closeMovie(); 
-                      clearTimeoutWatchMovie(e, true);
-                    }}
-                  > {
-                    check && <div>
-
-                    <iframe
-                      ref={movieHover}
-                      className="w-full hidden group-hover:block"
-                      src={`https://www.youtube.com/embed/${watchMoviePlaying}?autoplay=true`}
-                      title="YouTube video player"
-                      frameBorder="0"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    ></iframe>
-                    <div className="bottom-0 left-0">
-                      <button
-                        className="px-4 py-2 text-white"
-                        onClick={watchVideo(movie.id)}
+                  {watchMoviePlayingRef && movie.id == movieId && (
+                    <div
+                      className="group hidden has-[.hidden]:hidden hover:positioning group-hover:block bg-black transition-all duration-500 scale-100 hover:scale-150 top-0 left-0 z-50 absolute w-64 h-64"
+                      onMouseOver={() => watchMovie2()}
+                      onMouseLeave={() => {
+                        clearMovieHover();
+                        closeMovie();
+                        clearTimeoutWatchMovie();
+                      }}
+                    >
+                      <div
+                        ref={(el) => {
+                          movieHover.current = el;
+                        }}
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-12">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.91 11.672a.375.375 0 0 1 0 .656l-5.603 3.113a.375.375 0 0 1-.557-.328V8.887c0-.286.307-.466.557-.327l5.603 3.112Z" />
-                      </svg>
-
-                      </button>
-                      <div className="flex text-sm">
-                        {genres.map((genre, index) => (
-                          <div className="text-xs" key={index}>
-                            { genre.name } <span className={(genres.length == (index + 1)) ? 'hidden' : 'text-slate-700'}>*&nbsp;</span> 
+                        {check && (
+                          <iframe
+                            className="w-full hidden group-hover:block"
+                            src={`https://www.youtube.com/embed/${watchMoviePlaying}?autoplay=true`}
+                            title="YouTube video player"
+                            frameBorder="0"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          ></iframe>
+                        )}
+                        <div className="">
+                          <button
+                            className="px-4 py-2 text-white"
+                            onClick={watchVideo(movie.id)}
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              strokeWidth={1.5}
+                              stroke="currentColor"
+                              className="size-12"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+                              />
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M15.91 11.672a.375.375 0 0 1 0 .656l-5.603 3.113a.375.375 0 0 1-.557-.328V8.887c0-.286.307-.466.557-.327l5.603 3.112Z"
+                              />
+                            </svg>
+                          </button>
+                          <div className="flex text-sm">
+                            {genres.map((genre: Genre, index) => (
+                              <div className="text-xs" key={index}>
+                                {genre.name}{" "}
+                                <span
+                                  className={
+                                    genres.length == index + 1
+                                      ? "hidden"
+                                      : "text-slate-700"
+                                  }
+                                >
+                                  *&nbsp;
+                                </span>
+                              </div>
+                            ))}
                           </div>
-                        ))}
+                        </div>
                       </div>
                     </div>
-                    </div>
-
-                  }
-                  </div>
-}
+                  )}
                 </div>
               </SwiperSlide>
             ))}
@@ -414,7 +505,7 @@ const Home = () => {
               },
             }}
           >
-            {popular.map((movie, index) => (
+            {popular.map((movie: Movie, index) => (
               <SwiperSlide key={movie.id} onClick={watchVideo(movie.id)}>
                 <div
                   className={`p-4 flex items-center gap-0 ${

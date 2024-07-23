@@ -24,14 +24,20 @@ html, body, #root {
   border-radius: 12px;
 }
 
-.swiper-slide-active .hidden {
-  transform-origin: center left;
-}
-
-.swiper-slide-active ~ .swiper-slide:nth-of-type(6) .hidden  {
+.positioned .hidden {
   transform-origin: center right;
   left: auto;
   right: 0;
+}
+
+.swiper-slide-active ~ .swiper-slide:nth-of-type(6) .hidden { 
+  transform-origin: center right;
+  left: auto;
+  right: 0;
+}
+
+.swiper-wrapper .swiper-slide-active .hidden {
+  transform-origin: center left;
 }
 
 .swiper-slide:hover ~ .swiper-slide .z-40 {
