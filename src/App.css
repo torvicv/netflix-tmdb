@@ -43,3 +43,18 @@ html, body, #root {
 .swiper-slide:hover ~ .swiper-slide .z-40 {
   z-index: 30;
 }
+
+/* Cuadro de búsqueda */
+.searching {
+  animation: largeInput 1s linear forwards;
+  border: 1px solid white;
+}
+
+@keyframes largeInput {
+  from {
+    width: 0;
+  }
+  to {
+    width: 200px;
+  }
+}
