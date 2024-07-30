@@ -1,9 +1,17 @@
 import { NavLink } from 'react-router-dom';
 import netflix from './../assets/netflix.png';
 import { createRef, MouseEvent, useRef, useEffect } from 'react';
+import axios from 'axios';
 
-const Menu = () => {
+const Menu = (props) => {
 
+    const options = {
+        method: "GET",
+        headers: {
+          accept: "application/json",
+          Authorization: "Bearer " + import.meta.env.VITE_API_KEY,
+        },
+    };
 
     const checkOpenSearch = useRef(false);
     // búsqueda de películas.
@@ -12,13 +20,19 @@ const Menu = () => {
         const text = search.current as HTMLInputElement
 
         if (text.value.trim() === '') {
+            props.onChildResponse(null);
             return;
         }
         // enviar la petición a la API para buscar películas con el texto ingresado.
-
-        console.log();
-        
+        axios('https://api.themoviedb.org/3/search/movie?query='+text.value+'&include_adult=false&language=en-US&page=1', options)
+            .then(response => {
+                console.log(response);
+                
+                props.onChildResponse(response)
+            })
+            .catch(err => console.error(err));        
     }
+
     // abrir y cerrar el input de búsqueda.
     const onCloseSearch = () => {
         const element = document.querySelector('.searching');

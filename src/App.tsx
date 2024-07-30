@@ -2,13 +2,24 @@ import './App.css';
 import Home from './components/home/home';
 import Menu from './common/Menu';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import { useState } from 'react';
 
-const AppLayout = () => (
+const AppLayout = () => {
+
+  const [response, setResponse] = useState(null);
+
+  const handleChildResponse = (results) => {
+    console.log(results);
+    setResponse(results);
+  }
+
+  return (
   <>
-    <Menu />
-    <Home />
+    <Menu onChildResponse={handleChildResponse} />
+    <Home results={response} />
   </>
-)
+  );
+}
 
 const router = createBrowserRouter([
 

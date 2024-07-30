@@ -40,7 +40,7 @@ interface Result extends Movie {
   asset: string
 }
 
-const Home = () => {
+const Home = (props) => {
   const [bgHome, setBgHome] = useState(vite);
   const [bgHome2, setBgHome2] = useState(vite);
   const [bgHome3, setBgHome3] = useState(vite);
@@ -52,6 +52,9 @@ const Home = () => {
   const [movieId, setMovieId] = useState("");
   const watchMoviePlayingRef = useRef(null);
   const [genres, setGenres] = useState([]);
+  // resultados provinientes de la búsqueda del menu.
+  const [results, setResults] = useState(null);
+
   const assets = [
     {
       value: asset1,
@@ -291,9 +294,16 @@ const Home = () => {
   };
 
   useEffect(() => {
-    nowPlaying();
-    popularVideos();
-  }, []);
+    if (props.results?.data?.results?.length > 0) {
+      setResults(props.results.data.results);
+      console.log(results);
+      
+    } else {
+      nowPlaying();
+      popularVideos();
+      setResults(null);
+    }
+  }, [props, results]);
 
   return (
     <>
@@ -321,6 +331,98 @@ const Home = () => {
             </div>
           </div>
         </div>
+        {results && <div className='grid grid-cols-4 bg-[#000000AA] relative'>
+          { results.map((movie: Movie) => (
+              <div key={movie.id}>
+                <div className="group z-40 my-16 flex items-center relative overflow-visible">
+                  <div
+                    className="p-4"
+                    onMouseOver={() => watchMovie1(movie.id)}
+                    onMouseOut={() => {
+                      clearTimeoutWatchMovie();
+                    }}
+                  >
+                    <img
+                      className=""
+                      src={`https://image.tmdb.org/t/p/w200/${movie.poster_path}`}
+                      alt={movie.title}
+                    />
+                  </div>
+                  {watchMoviePlayingRef && movie.id == movieId && (
+                    <div
+                      className="group hidden has-[.hidden]:hidden hover:positioning group-hover:block bg-black transition-all duration-500 scale-100 hover:scale-150 top-0 left-0 z-50 absolute w-64 h-64"
+                      onMouseOver={() => watchMovie2()}
+                      onMouseLeave={() => {
+                        clearMovieHover();
+                        closeMovie();
+                        clearTimeoutWatchMovie();
+                      }}
+                    >
+                      <div
+                        ref={(el) => {
+                          movieHover.current = el;
+                        }}
+                      >
+                        {check && (
+                          <iframe
+                            className="w-full hidden group-hover:block"
+                            src={`https://www.youtube.com/embed/${watchMoviePlaying}?autoplay=true`}
+                            title="YouTube video player"
+                            frameBorder="0"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          ></iframe>
+                        )}
+                        <div className="">
+                          <button
+                            className="px-4 py-2 text-white"
+                            onClick={watchVideo(movie.id)}
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              strokeWidth={1.5}
+                              stroke="currentColor"
+                              className="size-12"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+                              />
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M15.91 11.672a.375.375 0 0 1 0 .656l-5.603 3.113a.375.375 0 0 1-.557-.328V8.887c0-.286.307-.466.557-.327l5.603 3.112Z"
+                              />
+                            </svg>
+                          </button>
+                          <div className="flex text-sm">
+                            {genres.map((genre: Genre, index) => (
+                              <div className="text-xs" key={index}>
+                                {genre.name}{" "}
+                                <span
+                                  className={
+                                    genres.length == index + 1
+                                      ? "hidden"
+                                      : "text-slate-700"
+                                  }
+                                >
+                                  *&nbsp;
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                   )}
+                   </div>
+                 </div>
+               ))}
+        </div>
+}
+{ results == null && <>
         <div className="relative h-screen w-full z-30 text-white flex items-end">
           <Swiper
             navigation={true}
@@ -527,6 +629,7 @@ const Home = () => {
             ))}
           </Swiper>
         </div>
+        </>}
       </div>
     </>
   );
