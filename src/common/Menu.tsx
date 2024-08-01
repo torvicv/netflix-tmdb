@@ -77,8 +77,8 @@ const Menu = (props) => {
 
     return (
         <>
-            <div className='fixed flex justify-between items-center top-0 left-0 z-50 w-full py-4 px-10 bg-gradient-to-b from-black to-transparent'>
-                <ul className='flex items-center gap-6 text-lg text-gray-400'>
+            <div className='fixed flex justify-between items-center top-0 left-0 z-50 w-full py-4 px-10 bg-gradient-to-b from-black to-transparent to-80%'>
+                <ul className='flex items-center gap-6 text-lg text-gray-200'>
                     <li>
                         <NavLink to="home">
                             <img src={netflix} alt="Netflix" className="h-16 w-32" />
